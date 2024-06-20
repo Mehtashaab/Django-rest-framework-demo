@@ -1,155 +1,327 @@
 from django.shortcuts import render
-from .models import Carlist,ShowroomList
+from .models import *
 #from django.http import JsonResponse
-from .drf_file.serializers import Carserializers,ShowroomSerilaizer
+from .drf_file.serializers import *
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.authentication import BasicAuthentication,SessionAuthentication
 from rest_framework.permissions import IsAuthenticated,IsAdminUser
-# # Create your views here.
-# # def car_list_view(request):
-# #     cars = Carlist.objects.all()
+from rest_framework import mixins
+from rest_framework import generics
 
-# #     data = {
-# #         "cars": list(cars.values()),
-# #     }
+# #// Create your views here.
 
-# #     return JsonResponse(data)
 
-# # def car_detail(request,pk):
-# #     car = Carlist.objects.get(pk=pk)
-
-# #     data = {
-# #         "name": car.name,
-# #         "description": car.description,
-# #         "active": car.active,
-
-# #     }
-
-# #     return JsonResponse(data)
-
-# @api_view()
-
+# Define a view function to retrieve a list of all cars
 # def car_list_view(request):
+#     # Retrieve all car objects from the database
 #     cars = Carlist.objects.all()
-#     serializer = Carserializers(cars,many=True) 
+    
+#     # Convert the car objects to a list of dictionaries
+#     # Each dictionary represents a car, with keys for name, description, and active status
+#     data = {
+#         "cars": list(cars.values()),
+#     }
+    
+#     # Return the list of cars as a JSON response
+#     return JsonResponse(data)
+
+# # Define a view function to retrieve a single car by its primary key (pk)
+# def car_detail(request, pk):
+#     # Retrieve the car object with the specified primary key (pk)
+#     car = Carlist.objects.get(pk=pk)
+    
+#     # Create a dictionary to store the car's details
+#     data = {
+#         # Include the car's name
+#         "name": car.name,
+#         # Include the car's description
+#         "description": car.description,
+#         # Include the car's active status
+#         "active": car.active,
+#     }
+    
+#     # Return the car's details as a JSON response
+#     return JsonResponse(data)
+
+# Define a view function to handle GET requests for car lists
+# @api_view(['GET'])  # Decorator to specify the allowed HTTP method
+# def car_list_view(request):
+#     # Retrieve all car lists from the database
+#     cars = Carlist.objects.all()
+#     # Serialize the car lists using the Carserializers
+#     serializer = Carserializers(cars, many=True)  
+#     # Return the serialized data in the response
 #     return Response(serializer.data)
 
-# @api_view()
- 
-
-# def car_detail(request,pk):
+# # Define a view function to handle GET requests for a single car detail
+# @api_view(['GET'])  # Decorator to specify the allowed HTTP method
+# def car_detail(request, pk):
+#     # Retrieve a single car list from the database by its primary key (pk)
 #     cars = Carlist.objects.get(pk=pk)
+#     # Serialize the car list using the Carserializers
 #     serializer = Carserializers(cars)
+#     # Return the serialized data in the response
 #     return Response(serializer.data)
-
 
 # create new datafield
 
-##Function Based Views
+## //Function Based Views
 
-@api_view (['GET','POST'])
+# Define a view function to handle GET and POST requests for car lists
+@api_view(['GET', 'POST'])
 def car_list_view(request):
+    # Handle GET requests
     if request.method == 'GET':
         try:
-
+            # Retrieve all car lists from the database
             cars = Carlist.objects.all()
         except:
-            return Response({'error':'car not found'},status= status.HTTP_404_NOT_FOUND)
+            # Return a 404 error response if no cars are found
+            return Response({'error': 'car not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = Carserializers(cars,many=True)
+        # Serialize the car lists using the Carserializers
+        serializer = CarSerializer(cars, many=True)
+        # Return the serialized data in the response
         return Response(serializer.data)
+
+    # Handle POST requests
     if request.method == 'POST':
-        serializer = Carserializers(data=request.data)
+        # Create a new serializer instance with the request data
+        serializer = CarSerializer(data=request.data)
+        # Check if the serializer is valid
         if serializer.is_valid():
+            # Save the serializer data to the database
             serializer.save()
+            # Return the saved data in the response
             return Response(serializer.data)
         else:
-            return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
-        
+            # Return a 400 error response with the serializer errors
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
-
-
-@api_view(['GET','PUT','DELETE'])
-def car_detail(request,pk):
+### car_detail function
+@api_view(['GET', 'PUT', 'DELETE'])
+def car_detail(request, pk):
+    """
+    A function-based view that handles GET, PUT, and DELETE requests for a single car.
+    
+    The function takes a request object and a primary key (pk) as arguments.
+    """
+    
+    # Handle GET requests
     if request.method == 'GET':
+        """
+        Retrieve a single car by its primary key.
+        
+        If the car is not found, return a 404 error response.
+        """
         try:
-
             cars = Carlist.objects.get(pk=pk)
         except:
-            return Response({'error':'car not found'},status= status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'car not found'}, status=status.HTTP_404_NOT_FOUND)
         
-        
-        serializer = Carserializers(cars)
+        # Serialize the car object
+        serializer = CarSerializer(cars)
         return Response(serializer.data)
+    
+    # Handle PUT requests
     if request.method == 'PUT':
+        """
+        Update a single car by its primary key.
+        
+        Deserialize the request data, validate it, and save it to the database if valid.
+        If the data is invalid, return a 400 error response.
+        """
         cars = Carlist.objects.get(pk=pk)
-        #print(cars)
-        serializer = Carserializers(cars,data=request.data)
+        #print(cars)  # Debugging statement
+        serializer = CarSerializer(cars, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         else:
-            return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Handle DELETE requests
     if request.method == 'DELETE':
+        """
+        Delete a single car by its primary key.
+        
+        Retrieve the car object and delete it from the database.
+        Return a 204 response to indicate success.
+        """
         cars = Carlist.objects.get(pk=pk)
         cars.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+# // CLASS BASED VIEWS
 
-# CLASS BASED VIEWS
-
+### Showroom_View class
 class Showroom_View(APIView):
-
-    # apply Authentications and Permissions
+    """
+    A class-based view that handles GET and POST requests for showrooms.
+    """
     #authentication_classes=[BasicAuthentication]
     #permission_classes=[IsAuthenticated] # it allows thw authenticated user to access
     #permission_classes=[IsAdminUser] # its allow only the admin user to acccess the data
-    #for Get Request
-
-    authentication_classes=[SessionAuthentication]
-    permission_classes=[IsAuthenticated]
-
-    def get(self,request):
-        showrrom = ShowroomList.objects.all()
-        serializer = ShowroomSerilaizer(showrrom,many=True,context={'request': request})
+    # Apply authentication and permission classes
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+    """
+    This view requires authentication using session authentication, and only allows 
+    authenticated users to access the data.
+    """
+    
+    def get(self, request):
+        """
+        Handle GET requests to retrieve a list of showrooms.
+        
+        Retrieves all showroom objects from the database, serializes them, and returns 
+        the serialized data in the response.
+        """
+        showrooms = ShowroomList.objects.all()
+        serializer = ShowroomSerializer(showrooms, many=True, context={'request': request})
         return Response(serializer.data)
     
-
-    # for Post Request
-
-    def post(self,request):
-        serializer =ShowroomSerilaizer(data = request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response (serializer.data)
-
-        else:
-            return Response(serializer.errors)
-
-class Showroom_details(APIView):
-    def get(self,request,pk):
-        try:
-            showroom = ShowroomList.objects.get(pk=pk)
-        except:
-            return Response({'error':'showroom not found'},status= status.HTTP_404_NOT_FOUND)
-        serializer = ShowroomSerilaizer(showroom)
-        return Response(serializer.data)
-    def put(self,request,pk):
-        showroom = ShowroomList.objects.get(pk=pk)
-        serializer = ShowroomSerilaizer(showroom,data=request.data)
+    def post(self, request):
+        """
+        Handle POST requests to create a new showroom.
+        
+        Deserializes the request data, validates it, and saves it to the database if 
+        valid. Returns the serialized data in the response.
+        """
+        serializer = ShowroomSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         else:
-            return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors)
+
+
+### Showroom_details class
+
+class Showroom_details(APIView):
+    """
+    A class-based view that handles GET, PUT, and DELETE requests for a single showroom.
+    """
+    
+    def get(self, request, pk):
+        """
+        Handle GET requests to retrieve a single showroom.
         
-    def delete(self,request,pk):
+        Retrieves the showroom object with the specified primary key from the database, 
+        serializes it, and returns the serialized data in the response. If the showroom 
+        is not found, returns a 404 error response.
+        """
+        try:
+            showroom = ShowroomList.objects.get(pk=pk)
+        except:
+            return Response({'error': 'showroom not found'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = ShowroomSerializer(showroom)
+        return Response(serializer.data)
+    
+    def put(self, request, pk):
+        """
+        Handle PUT requests to update a single showroom.
+        
+        Retrieves the showroom object with the specified primary key from the database, 
+        deserializes the request data, validates it, and saves it to the database if 
+        valid. Returns the serialized data in the response. If the data is invalid, 
+        returns a 400 error response.
+        """
+        showroom = ShowroomList.objects.get(pk=pk)
+        serializer = ShowroomSerializer(showroom, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, pk):
+        """
+        Handle DELETE requests to delete a single showroom.
+        
+        Retrieves the showroom object with the specified primary key from the database 
+        and deletes it. Returns a 204 response to indicate success.
+        """
         showroom = ShowroomList.objects.get(pk=pk)
         showroom.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+class ReviewList(mixins.ListModelMixin, 
+                 mixins.CreateModelMixin, 
+                 generics.GenericAPIView):
+    """
+    A class-based view that handles both listing and creating reviews.
     
+    It inherits from GenericAPIView, ListModelMixin, and CreateModelMixin to provide 
+    built-in functionality for listing and creating reviews.
+    """
+    
+    # Define the queryset that this view will operate on
+    queryset = Review.objects.all()
+    """
+    This queryset retrieves all review objects from the database.
+    """
+    
+    # Define the serializer class that will be used for serialization and deserialization
+    serializer_class = ReviewSerializer
+    """
+    This serializer class is responsible for converting Review objects to JSON data 
+    and vice versa.
+    """
+    
+    def get(self, request, *args, **kwargs):
+        """
+        Handle GET requests to list all reviews.
+        
+        Calls the list method provided by ListModelMixin to return a list of reviews.
+        """
+        return self.list(request, *args, **kwargs)
+    
+    def post(self, request, *args, **kwargs):
+        """
+        Handle POST requests to create a new review.
+        
+        Calls the create method provided by CreateModelMixin to create a new review.
+        """
+        return self.create(request, *args, **kwargs)
+    
+
+
+
+class ReviewDetails(mixins.RetrieveModelMixin, 
+                    generics.GenericAPIView):
+    """
+    A class-based view that handles retrieving a single review.
+    
+    It inherits from GenericAPIView and RetrieveModelMixin to provide 
+    built-in functionality for retrieving a review.
+    """
+    
+    # Define the queryset that this view will operate on
+    queryset = Review.objects.all()
+    """
+    This queryset retrieves all review objects from the database.
+    """
+    
+    # Define the serializer class that will be used for serialization and deserialization
+    serializer_class = ReviewSerializer
+    """
+    This serializer class is responsible for converting Review objects to JSON data 
+    and vice versa.
+    """
+    
+    def get(self, request, *args, **kwargs):
+        """
+        Handle GET requests to retrieve a single review.
+        
+        Calls the retrieve method provided by RetrieveModelMixin to return a single review.
+        The retrieve method will automatically handle the lookup of the review by its ID.
+        """
+        return self.retrieve(request, *args, **kwargs)
+    
+
+        
