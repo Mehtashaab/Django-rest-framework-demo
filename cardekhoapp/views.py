@@ -6,8 +6,10 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
+from rest_framework import viewsets
+from django.shortcuts import get_object_or_404
 from rest_framework.authentication import BasicAuthentication,SessionAuthentication
-from rest_framework.permissions import IsAuthenticated,IsAdminUser
+from rest_framework.permissions import IsAuthenticated,IsAdminUser,DjangoModelPermissions
 from rest_framework import mixins
 from rest_framework import generics
 
@@ -200,6 +202,10 @@ class Showroom_View(APIView):
             return Response(serializer.errors)
 
 
+
+
+
+
 ### Showroom_details class
 
 class Showroom_details(APIView):
@@ -249,79 +255,199 @@ class Showroom_details(APIView):
         showroom = ShowroomList.objects.get(pk=pk)
         showroom.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
 
-class ReviewList(mixins.ListModelMixin, 
-                 mixins.CreateModelMixin, 
-                 generics.GenericAPIView):
+# // VIEWSSETS AND ROUTERS
+
+
+# Define a ViewSet class named Showroom_Viewset that inherits from viewsets.Viewset
+class Showroom_Viewset(viewsets.ViewSet):
     """
-    A class-based view that handles both listing and creating reviews.
-    
-    It inherits from GenericAPIView, ListModelMixin, and CreateModelMixin to provide 
-    built-in functionality for listing and creating reviews.
+    This ViewSet handles CRUD operations for Showroom models.
     """
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [DjangoModelPermissions]
+    # Define a method to handle GET requests to retrieve a list of all showrooms
+    def list(self, request):
+        """
+        Returns a list of all showrooms.
+        """
+        # Retrieve all showroom objects from the database
+        queryset = ShowroomList.objects.all()
+        
+        # Serialize the queryset into a JSON response
+        serializers = ShowroomSerializer(queryset, many=True)
+        
+        # Return the serialized data as a response
+        return Response(serializers.data)
     
-    # Define the queryset that this view will operate on
+    # Define a method to handle GET requests to retrieve a single showroom by ID
+    def retrieve(self, request, pk=None):
+        """
+        Returns a single showroom by ID.
+        """
+        # Retrieve all showroom objects from the database
+        queryset = ShowroomList.objects.all()
+        
+        # Get the showroom object with the specified ID, or raise a 404 error if not found
+        showroom = get_object_or_404(queryset, pk=pk)
+        
+        # Serialize the showroom object into a JSON response
+        serializers = ShowroomSerializer(showroom)
+        
+        # Return the serialized data as a response
+        return Response(serializers.data)
+    
+    # Define a method to handle POST requests to create a new showroom
+    def create(self, request):
+        """
+        Creates a new showroom.
+        """
+        # Create a serializer instance with the request data
+        serializers = ShowroomSerializer(data=request.data)
+        
+        # Check if the serializer is valid
+        if serializers.is_valid():
+            # Save the serializer data to the database
+            serializers.save()
+            
+            # Return the serialized data as a response
+            return Response(serializers.data)
+        else:
+            # Return an error response with the serializer errors
+            return Response(serializers.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+    def delete(self, request, pk):
+        """
+        Handle DELETE requests to delete a single showroom.
+        
+        Retrieves the showroom object with the specified primary key from the database 
+        and deletes it. Returns a 204 response to indicate success.
+        """
+        showroom = ShowroomList.objects.get(pk=pk)
+        showroom.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# // CREATE THE VIEWS USING THE GENIERICVIEWS AND MIXINS
+
+# class ReviewList(mixins.ListModelMixin, 
+#                  mixins.CreateModelMixin, 
+#                  generics.GenericAPIView):
+#     """
+#     A class-based view that handles both listing and creating reviews.
+    
+#     It inherits from GenericAPIView, ListModelMixin, and CreateModelMixin to provide 
+#     built-in functionality for listing and creating reviews.
+#     """
+    
+#     # Define the queryset that this view will operate on
+#     queryset = Review.objects.all()
+#     """
+#     This queryset retrieves all review objects from the database.
+#     """
+    
+#     # Define the serializer class that will be used for serialization and deserialization
+#     serializer_class = ReviewSerializer
+#     """
+#     This serializer class is responsible for converting Review objects to JSON data 
+#     and vice versa.
+#     """
+
+
+#     authentication_classes = [SessionAuthentication]
+#     permission_classes = [DjangoModelPermissions]
+    
+#     """Add the Django model permission"""
+#     def get(self, request, *args, **kwargs):
+#         """
+#         Handle GET requests to list all reviews.
+        
+#         Calls the list method provided by ListModelMixin to return a list of reviews.
+#         """
+#         return self.list(request, *args, **kwargs)
+    
+#     def post(self, request, *args, **kwargs):
+#         """
+#         Handle POST requests to create a new review.
+        
+#         Calls the create method provided by CreateModelMixin to create a new review.
+#         """
+#         return self.create(request, *args, **kwargs)
+    
+
+
+
+# class ReviewDetails(mixins.RetrieveModelMixin, 
+#                     generics.GenericAPIView):
+#     """
+#     A class-based view that handles retrieving a single review.
+    
+#     It inherits from GenericAPIView and RetrieveModelMixin to provide 
+#     built-in functionality for retrieving a review.
+#     """
+    
+#     # Define the queryset that this view will operate on
+#     queryset = Review.objects.all()
+#     """
+#     This queryset retrieves all review objects from the database.
+#     """
+    
+#     # Define the serializer class that will be used for serialization and deserialization
+#     serializer_class = ReviewSerializer
+#     """
+#     This serializer class is responsible for converting Review objects to JSON data 
+#     and vice versa.
+#     """
+    
+#     def get(self, request, *args, **kwargs):
+#         """
+#         Handle GET requests to retrieve a single review.
+        
+#         Calls the retrieve method provided by RetrieveModelMixin to return a single review.
+#         The retrieve method will automatically handle the lookup of the review by its ID.
+#         """
+#         return self.retrieve(request, *args, **kwargs)
+    
+
+# //CREATE THE VIEWS USING THE CONCRETE VIEWS CLASSES USING ONLY GENERICS NOT MIXINS
+
+
+# Define a class-based view for listing and creating reviews
+class ReviewList(generics.ListCreateAPIView):
+    """
+    This view handles GET and POST requests for reviews.
+    GET requests will return a list of all reviews.
+    POST requests will create a new review.
+    """
+    # Define the queryset that will be used to retrieve reviews
     queryset = Review.objects.all()
-    """
-    This queryset retrieves all review objects from the database.
-    """
     
-    # Define the serializer class that will be used for serialization and deserialization
+    # Specify the serializer class that will be used to serialize and deserialize reviews
     serializer_class = ReviewSerializer
-    """
-    This serializer class is responsible for converting Review objects to JSON data 
-    and vice versa.
-    """
-    
-    def get(self, request, *args, **kwargs):
-        """
-        Handle GET requests to list all reviews.
-        
-        Calls the list method provided by ListModelMixin to return a list of reviews.
-        """
-        return self.list(request, *args, **kwargs)
-    
-    def post(self, request, *args, **kwargs):
-        """
-        Handle POST requests to create a new review.
-        
-        Calls the create method provided by CreateModelMixin to create a new review.
-        """
-        return self.create(request, *args, **kwargs)
-    
+
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [DjangoModelPermissions]
 
 
-
-class ReviewDetails(mixins.RetrieveModelMixin, 
-                    generics.GenericAPIView):
+# Define a class-based view for retrieving, updating, and deleting individual reviews
+class ReviewDetails(generics.RetrieveUpdateDestroyAPIView):
     """
-    A class-based view that handles retrieving a single review.
-    
-    It inherits from GenericAPIView and RetrieveModelMixin to provide 
-    built-in functionality for retrieving a review.
+    This view handles GET, PUT, and DELETE requests for individual reviews.
+    GET requests will return a single review.
+    PUT requests will update a single review.
+    DELETE requests will delete a single review.
     """
-    
-    # Define the queryset that this view will operate on
+    # Define the queryset that will be used to retrieve reviews
+    # This will allow the view to retrieve a single review by its ID
     queryset = Review.objects.all()
-    """
-    This queryset retrieves all review objects from the database.
-    """
     
-    # Define the serializer class that will be used for serialization and deserialization
-    serializer_class = ReviewSerializer
-    """
-    This serializer class is responsible for converting Review objects to JSON data 
-    and vice versa.
-    """
-    
-    def get(self, request, *args, **kwargs):
-        """
-        Handle GET requests to retrieve a single review.
-        
-        Calls the retrieve method provided by RetrieveModelMixin to return a single review.
-        The retrieve method will automatically handle the lookup of the review by its ID.
-        """
-        return self.retrieve(request, *args, **kwargs)
-    
+    # Specify the serializer class that will be used to serialize and deserialize reviews
+    # This serializer will be used to validate and convert data for the review
+    serializer_class = ReviewSerializer    
 
-        
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [DjangoModelPermissions]
+    
+    # apply the basic authentications to the page
+
